@@ -400,7 +400,7 @@ public class ConfigService
 
         StringBuilder withComments = new StringBuilder();
         withComments.append("// Discord Bot Configuration\n");
-        withComments.append("// For more info visit: https://github.com/your-repo\n");
+        withComments.append("// For more info visit: https://github.com/DaniilOpryshko/DiscordOnlineDayzBot\n");
         withComments.append("//\n");
         withComments.append("// Available placeholders for status.message:\n");
         withComments.append("//   ${emoji.player} - Player emoji\n");

@@ -170,13 +170,13 @@ public class ConfigService
             }
             else
             {
-                logger.warn("Invalid activity type, using default (PLAYING)");
                 boolean b = Arrays.stream(Activity.ActivityType.values())
                         .map(Activity.ActivityType::name)
                         .anyMatch(name -> name.equals(cfg.status.activityType));
 
                 if (!b)
                 {
+                    logger.warn("Invalid activity type, using default (PLAYING)");
                     cfg.status.activityType = "PLAYING";
                 }
             }

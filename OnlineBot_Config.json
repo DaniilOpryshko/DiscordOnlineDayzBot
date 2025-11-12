@@ -1,5 +1,5 @@
 // Discord Bot Configuration
-// For more info visit: https://github.com/your-repo
+// For more info visit: https://github.com/DaniilOpryshko/DiscordOnlineDayzBot
 //
 // Available placeholders for status.message:
 //   ${emoji.player} - Player emoji
@@ -11,13 +11,13 @@
 //   ${queue} - Queue size
 //   ${status.queueBlock} - Queue block (if enabled)
 
-//   Possible values for activityType: PLAYING, LISTENING, WATCHING, COMPETING, CUSTOM
+//   Possible values for activityType: PLAYING, LISTENING, WATCHING, COMPETING, CUSTOM_STATUS
 //
 // Note: Changes require bot restart
 //
 
 {
-  "version" : 2,
+  "version" : 3,
   "server" : {
     "ip" : "127.0.0.1",
     "port" : 2302
@@ -38,6 +38,7 @@
     "message" : "${emoji.player} ${online} / ${max} ${emoji.daytime} ${time} ${status.queueBlock} ",
     "queueBlock" : "${emoji.queue} ${queue}",
     "showQueueIfNotActive" : true,
-    "activityType" : "PLAYING"
+    "activityType" : "PLAYING",
+    "serverOfflineMessage" : "Server offline"
   }
 }

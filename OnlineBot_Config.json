@@ -1,0 +1,43 @@
+// Discord Bot Configuration
+// For more info visit: https://github.com/your-repo
+//
+// Available placeholders for status.message:
+//   ${emoji.player} - Player emoji
+//   ${emoji.daytime} - Day/Night emoji
+//   ${emoji.queue} - Queue emoji
+//   ${online} - Current online players
+//   ${max} - Max players
+//   ${time} - In-game time
+//   ${queue} - Queue size
+//   ${status.queueBlock} - Queue block (if enabled)
+
+//   Possible values for activityType: PLAYING, LISTENING, WATCHING, COMPETING, CUSTOM
+//
+// Note: Changes require bot restart
+//
+
+{
+  "version" : 2,
+  "server" : {
+    "ip" : "127.0.0.1",
+    "port" : 2302
+  },
+  "emojis" : {
+    "player" : "👥",
+    "day" : "☀️",
+    "night" : "🌙",
+    "queue" : "👥"
+  },
+  "updater" : {
+    "intervalSeconds" : 10
+  },
+  "discord" : {
+    "token" : "YOUR_BOT_TOKEN_HERE"
+  },
+  "status" : {
+    "message" : "${emoji.player} ${online} / ${max} ${emoji.daytime} ${time} ${status.queueBlock} ",
+    "queueBlock" : "${emoji.queue} ${queue}",
+    "showQueueIfNotActive" : true,
+    "activityType" : "PLAYING"
+  }
+}

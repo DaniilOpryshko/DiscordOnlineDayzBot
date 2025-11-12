@@ -1,11 +1,13 @@
 package com.danielele;
 
+import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.Startup;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,6 +198,15 @@ public class OnlineUpdater
         catch (NoSuchAlgorithmException e)
         {
             throw new RuntimeException("SHA-1 algorithm not found", e);
+        }
+    }
+
+    void onShutdown(@Observes ShutdownEvent event)
+    {
+        logger.info("Quarkus ShutdownEvent triggered. Stopping scheduler gracefully...");
+        if (currentTask != null)
+        {
+            currentTask.cancel(true);
         }
     }
 }

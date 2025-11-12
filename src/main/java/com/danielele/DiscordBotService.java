@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.EnumSet;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Startup
 @ApplicationScoped
@@ -111,14 +112,34 @@ public class DiscordBotService
 
     void onShutdown(@Observes ShutdownEvent event)
     {
+        logger.info("Quarkus ShutdownEvent triggered. Stopping bot gracefully...");
         if (jda != null)
         {
-            jda.shutdown();
-            logger.info("Bot disconnected");
+            try
+            {
+                jda.shutdown();
+                if (!jda.awaitShutdown(5, TimeUnit.SECONDS))
+                {
+                    logger.warn("Timeout waiting for JDA to shut down — forcing close.");
+                    jda.shutdownNow();
+                }
+                else
+                {
+                    logger.info("Discord bot stopped successfully.");
+                }
+            }
+            catch (InterruptedException e)
+            {
+                Thread.currentThread().interrupt();
+            }
+            catch (Exception e)
+            {
+                logger.error("Error during shutdown: {}", e.getMessage());
+            }
         }
     }
 
-    private Activity.ActivityType  getActivityType(String type)
+    private Activity.ActivityType getActivityType(String type)
     {
         return switch (type)
         {
@@ -126,7 +147,7 @@ public class DiscordBotService
             case "LISTENING" -> Activity.ActivityType.LISTENING;
             case "WATCHING" -> Activity.ActivityType.WATCHING;
             case "COMPETING" -> Activity.ActivityType.COMPETING;
-            case "CUSTOM" -> Activity.ActivityType.CUSTOM_STATUS;
+            case "CUSTOM_STATUS" -> Activity.ActivityType.CUSTOM_STATUS;
             default -> Activity.ActivityType.PLAYING;
         };
     }

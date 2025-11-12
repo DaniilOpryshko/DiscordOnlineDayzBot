@@ -411,7 +411,7 @@ public class ConfigService
         withComments.append("//   ${time} - In-game time\n");
         withComments.append("//   ${queue} - Queue size\n");
         withComments.append("//   ${status.queueBlock} - Queue block (if enabled)\n\n");
-        withComments.append("//   Possible values for activityType: PLAYING, LISTENING, WATCHING, COMPETING, CUSTOM\n");
+        withComments.append("//   Possible values for activityType: PLAYING, LISTENING, WATCHING, COMPETING, CUSTOM_STATUS\n");
         withComments.append("//\n");
         withComments.append("// Note: Changes require bot restart\n");
         withComments.append("//\n\n");

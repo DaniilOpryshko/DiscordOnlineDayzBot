@@ -37,7 +37,7 @@ The bot supports following activity types in config:
 - `LISTENING` - Shows as "Listening to {status}"
 - `WATCHING` - Shows as "Watching {status}"
 - `COMPETING` - Shows as "Competing in {status}"
-- `CUSTOM` - Shows as custom status
+- `CUSTOM_STATUS` - Shows as custom status
 
 ## Configuration
 

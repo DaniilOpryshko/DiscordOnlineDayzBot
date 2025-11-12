@@ -43,14 +43,14 @@ public class DiscordBotService
                 logger.error("========================================");
                 logger.error("INVALID TOKEN!");
                 logger.error("Please set discord.token in config.json");
-                logger.error("Application will shut down in 3 seconds...");
+                logger.error("Application will shut down in 5 seconds...");
                 logger.error("========================================");
 
                 Executors.newSingleThreadExecutor().submit(() ->
                 {
                     try
                     {
-                        Thread.sleep(3000);
+                        Thread.sleep(5000);
                         logger.info("Shutting down application...");
                         Quarkus.asyncExit(1);
                     }

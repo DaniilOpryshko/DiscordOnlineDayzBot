@@ -127,6 +127,11 @@ public class OnlineUpdater
 
     private String formatPresenceMessage(CFToolsResponse.ServerData server)
     {
+        if(server.isOffline())
+        {
+            return configService.getStatus().serverOfflineMessage;
+        }
+
         String timeEmoji = getTimeEmoji(server.getEnvironment().getTime());
 
         String message = configService.getStatus().message;

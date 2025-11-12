@@ -31,7 +31,7 @@ public class ConfigService
     private static final String CONFIG_FILE = "OnlineBot_Config.json";
     private static final String BACKUP_SUFFIX = ".backup";
     private static final String CORRUPTED_BACKUP_SUFFIX = ".corrupted";
-    private static final int CONFIG_VERSION = 2;
+    private static final int CONFIG_VERSION = 3;
 
     public ConfigService()
     {
@@ -163,6 +163,12 @@ public class ConfigService
                 cfg.status.queueBlock = defaults.status.queueBlock;
             }
 
+            if (cfg.status.serverOfflineMessage == null || cfg.status.serverOfflineMessage.isBlank())
+            {
+                logger.warn("Invalid serverOfflineMessage, using default");
+                cfg.status.serverOfflineMessage = defaults.status.serverOfflineMessage;
+            }
+
             if (cfg.status.activityType == null)
             {
                 logger.warn("No activity type, using default (PLAYING)");
@@ -225,6 +231,7 @@ public class ConfigService
             defaultConfig.status.queueBlock = oldConfig.status.queueBlock != null ? oldConfig.status.queueBlock : defaultConfig.status.queueBlock;
             defaultConfig.status.showQueueIfNotActive = oldConfig.status.showQueueIfNotActive;
             defaultConfig.status.activityType = oldConfig.status.activityType;
+            defaultConfig.status.serverOfflineMessage = oldConfig.status.serverOfflineMessage != null ? oldConfig.status.serverOfflineMessage : defaultConfig.status.serverOfflineMessage;
         }
 
         logger.info("Config merged successfully");
@@ -386,6 +393,7 @@ public class ConfigService
 
         cfg.status = new StatusConfig();
         cfg.status.message = "${emoji.player} ${online} / ${max} ${emoji.daytime} ${time} ${status.queueBlock} ";
+        cfg.status.serverOfflineMessage = "Server offline";
         cfg.status.queueBlock = "${emoji.queue} ${queue}";
         cfg.status.showQueueIfNotActive = true;
         cfg.status.activityType = "PLAYING";
@@ -488,6 +496,7 @@ public class ConfigService
         public String queueBlock;
         public boolean showQueueIfNotActive;
         public String activityType;
+        public String serverOfflineMessage;
     }
 
     @RegisterForReflection

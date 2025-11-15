@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 public class OnlineUpdater
 {
     private final DiscordBotService discordBotService;
+    private final PaymentStrategyFactory paymentStrategyFactory;
     private final ConfigService configService;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
@@ -35,9 +36,10 @@ public class OnlineUpdater
     @Inject
     Vertx vertx;
 
-    public OnlineUpdater(DiscordBotService discordBotService, ConfigService configService)
+    public OnlineUpdater(DiscordBotService discordBotService, PaymentStrategyFactory paymentStrategyFactory, ConfigService configService)
     {
         this.discordBotService = discordBotService;
+        this.paymentStrategyFactory = paymentStrategyFactory;
         this.configService = configService;
     }
 
@@ -68,52 +70,21 @@ public class OnlineUpdater
 
     void updateOnlineStats()
     {
-        if (gameServerId == null)
-        {
-            gameServerId = toSHA1("1" + configService.getServer().ip + configService.getServer().port);
-        }
-
         if (!discordBotService.isReady())
         {
             return;
         }
 
-        WebClient client = WebClient.create(vertx);
+        ServerOnlineFun serverOnline = paymentStrategyFactory.getStrategy(OnlineProviderType.CF_TOOLS).getServerOnline();
+        handleResponse(serverOnline);
 
-        client.getAbs("https://data.cftools.cloud/v1/gameserver/" + gameServerId)
-                .send()
-                .onSuccess(resp ->
-                {
-                    if (resp.statusCode() != 200)
-                    {
-                        discordBotService.updatePresence("Offline");
-                        logger.info("CF Tools API returned {}. Probably server is offline or server ip is incorrect", resp.statusCode());
-                        return;
-                    }
-                    handleResponse(resp.bodyAsJsonObject());
-                })
-                .onFailure(failure ->
-                        {
-                            discordBotService.updatePresence("Offline");
-                            logger.error("Error: {}", failure.getMessage());
-                        }
-                );
     }
 
-    private void handleResponse(JsonObject json)
+    private void handleResponse(ServerOnlineFun serverOnlineFun)
     {
         try
         {
-            CFToolsResponse response = json.mapTo(CFToolsResponse.class);
-            CFToolsResponse.ServerData server = response.getServer(gameServerId);
-
-            if (server == null)
-            {
-                logger.error("Server not found: {}", gameServerId);
-                return;
-            }
-
-            String presence = formatPresenceMessage(server);
+            String presence = formatPresenceMessage(serverOnlineFun);
 
             discordBotService.updatePresence(presence);
 
@@ -125,29 +96,29 @@ public class OnlineUpdater
         }
     }
 
-    private String formatPresenceMessage(CFToolsResponse.ServerData server)
+    private String formatPresenceMessage(ServerOnlineFun serverOnlineFun)
     {
-        if(server.isOffline())
+        if(!serverOnlineFun.isOnline())
         {
             return configService.getStatus().serverOfflineMessage;
         }
 
-        String timeEmoji = getTimeEmoji(server.getEnvironment().getTime());
+        String timeEmoji = getTimeEmoji(serverOnlineFun.getServerTime());
 
         String message = configService.getStatus().message;
 
         return message
                 .replace("${emoji.player}", configService.getEmojis().player)
-                .replace("${online}", String.valueOf(server.getStatus().getPlayers()))
-                .replace("${max}", String.valueOf(server.getStatus().getSlots()))
+                .replace("${online}", String.valueOf(serverOnlineFun.getCurrentPlayers()))
+                .replace("${max}", String.valueOf(serverOnlineFun.getMaxPlayers()))
                 .replace("${emoji.daytime}", timeEmoji)
-                .replace("${time}", server.getEnvironment().getTime())
-                .replace("${status.queueBlock}", getQueueBlock(server));
+                .replace("${time}", serverOnlineFun.getServerTime())
+                .replace("${status.queueBlock}", getQueueBlock(serverOnlineFun));
     }
 
-    private String getQueueBlock(CFToolsResponse.ServerData server)
+    private String getQueueBlock(ServerOnlineFun serverOnlineFun)
     {
-        boolean shouldShow = server.getStatus().getQueue().isActive()
+        boolean shouldShow = serverOnlineFun.isQueueActive()
                 || configService.getStatus().showQueueIfNotActive;
 
         if (!shouldShow)
@@ -157,7 +128,7 @@ public class OnlineUpdater
 
         return configService.getStatus().queueBlock
                 .replace("${emoji.queue}", configService.getEmojis().queue)
-                .replace("${queue}", String.valueOf(server.getStatus().getQueue().getSize()));
+                .replace("${queue}", String.valueOf(serverOnlineFun.getQueueSize()));
     }
 
     private String getTimeEmoji(String serverTime)

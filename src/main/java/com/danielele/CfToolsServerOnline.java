@@ -18,7 +18,7 @@ public class CfToolsServerOnline implements ServerOnlineFun
     @Override
     public Integer getMaxPlayers()
     {
-        return serverData.getStatus().getPlayers();
+        return serverData.getStatus().getSlots();
     }
 
     @Override

@@ -52,7 +52,7 @@ public class CfToolsOnlineProvider implements OnlineProvider
         }
         catch (InterruptedException | ExecutionException e)
         {
-            throw new RuntimeException(e);
+            return new CfToolsServerOnline(null);
         }
     }
 

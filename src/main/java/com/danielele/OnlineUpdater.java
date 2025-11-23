@@ -98,11 +98,6 @@ public class OnlineUpdater
 
     private String formatPresenceMessage(ServerOnlineFun serverOnlineFun)
     {
-        if(!serverOnlineFun.isOnline())
-        {
-            return configService.getStatus().serverOfflineMessage;
-        }
-
         String timeEmoji = getTimeEmoji(serverOnlineFun.getServerTime());
 
         String message = configService.getStatus().message;

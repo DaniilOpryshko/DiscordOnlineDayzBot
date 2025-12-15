@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.EnumSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -46,19 +47,22 @@ public class DiscordBotService
                 logger.error("Application will shut down in 5 seconds...");
                 logger.error("========================================");
 
-                Executors.newSingleThreadExecutor().submit(() ->
+                try (ExecutorService executor = Executors.newSingleThreadExecutor())
                 {
-                    try
+                    executor.submit(() ->
                     {
-                        Thread.sleep(5000);
-                        logger.info("Shutting down application...");
-                        Quarkus.asyncExit(1);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
-                });
+                        try
+                        {
+                            Thread.sleep(5000);
+                            logger.info("Shutting down application...");
+                            Quarkus.asyncExit(1);
+                        }
+                        catch (InterruptedException e)
+                        {
+                            Thread.currentThread().interrupt();
+                        }
+                    });
+                }
 
                 return;
             }

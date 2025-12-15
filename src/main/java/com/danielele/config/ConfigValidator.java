@@ -6,9 +6,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-/**
- * Отвечает за валидацию и исправление конфигурации
- */
 public class ConfigValidator
 {
     private static final Logger logger = LoggerFactory.getLogger(ConfigValidator.class);

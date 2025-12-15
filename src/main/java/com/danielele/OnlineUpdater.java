@@ -2,19 +2,12 @@ package com.danielele;
 
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.Startup;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -29,12 +22,8 @@ public class OnlineUpdater
     private final ConfigService configService;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
-    private String gameServerId = null;
 
     private static final Logger logger = LoggerFactory.getLogger(OnlineUpdater.class);
-
-    @Inject
-    Vertx vertx;
 
     public OnlineUpdater(DiscordBotService discordBotService, PaymentStrategyFactory paymentStrategyFactory, ConfigService configService)
     {
@@ -143,32 +132,6 @@ public class OnlineUpdater
         catch (Exception e)
         {
             return configService.getEmojis().day;
-        }
-    }
-
-    private String toSHA1(String input)
-    {
-        try
-        {
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
-            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash)
-            {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1)
-                {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-
-            return hexString.toString();
-        }
-        catch (NoSuchAlgorithmException e)
-        {
-            throw new RuntimeException("SHA-1 algorithm not found", e);
         }
     }
 

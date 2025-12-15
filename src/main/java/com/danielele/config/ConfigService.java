@@ -1,6 +1,5 @@
 package com.danielele.config;
 
-import com.danielele.config.legacy.AppConfig;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

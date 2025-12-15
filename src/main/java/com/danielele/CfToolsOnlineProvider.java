@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @ApplicationScoped
 @OnlineProviderAnnot(value = OnlineProviderType.CF_TOOLS)
@@ -37,7 +39,7 @@ public class CfToolsOnlineProvider implements OnlineProvider
             }
 
             HttpResponse<Buffer> response = webClient.getAbs("https://data.cftools.cloud/v1/gameserver/" + gameServerId)
-                    .send().toCompletionStage().toCompletableFuture().get();
+                    .send().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
             if (response.statusCode() != 200)
             {
@@ -49,7 +51,7 @@ public class CfToolsOnlineProvider implements OnlineProvider
 
             return new CfToolsServerOnline(server);
         }
-        catch (InterruptedException | ExecutionException e)
+        catch (InterruptedException | TimeoutException | ExecutionException e)
         {
             throw new RuntimeException(e);
         }

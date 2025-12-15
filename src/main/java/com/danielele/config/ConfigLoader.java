@@ -11,9 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
-/**
- * Отвечает за загрузку и сохранение конфигурации из/в файлы
- */
 public class ConfigLoader
 {
     private static final Logger logger = LoggerFactory.getLogger(ConfigLoader.class);

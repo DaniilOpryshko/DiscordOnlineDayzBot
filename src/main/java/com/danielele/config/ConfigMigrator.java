@@ -6,9 +6,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 
-/**
- * Отвечает за миграцию конфигурации между версиями
- */
 public class ConfigMigrator
 {
     private static final Logger logger = LoggerFactory.getLogger(ConfigMigrator.class);

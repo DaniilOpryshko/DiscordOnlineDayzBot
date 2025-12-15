@@ -1,5 +1,7 @@
-package com.danielele;
+package com.danielele.provider;
 
+import com.danielele.ServerOnlineFun;
+import com.danielele.config.ConfigService;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -8,6 +10,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -17,26 +22,21 @@ import java.util.concurrent.TimeoutException;
 public class CfToolsOnlineProvider implements OnlineProvider
 {
     private final WebClient webClient;
-    private final ConfigService configService;
 
-    private String gameServerId = null;
+    private Map<ConfigService.ServerConfig, String> serverIdCache = new ConcurrentHashMap<>();
 
-    public CfToolsOnlineProvider(WebClient webClient,
-                                 ConfigService configService)
+    public CfToolsOnlineProvider(WebClient webClient)
     {
         this.webClient = webClient;
-        this.configService = configService;
     }
 
     @Override
-    public ServerOnlineFun getServerOnline()
+    public ServerOnlineFun getServerOnline(ConfigService.ServerConfig serverConfig)
     {
         try
         {
-            if (gameServerId == null)
-            {
-                gameServerId = toSHA1("1" + configService.getServer().ip + configService.getServer().port);
-            }
+            String gameServerId = serverIdCache.computeIfAbsent(serverConfig, (k) -> toSHA1("1" + serverConfig.ip + serverConfig.port));
+
 
             HttpResponse<Buffer> response = webClient.getAbs("https://data.cftools.cloud/v1/gameserver/" + gameServerId)
                     .send().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);

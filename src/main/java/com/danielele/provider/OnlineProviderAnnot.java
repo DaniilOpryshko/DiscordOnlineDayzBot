@@ -1,4 +1,4 @@
-package com.danielele;
+package com.danielele.provider;
 
 import jakarta.inject.Qualifier;
 

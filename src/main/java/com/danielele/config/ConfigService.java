@@ -90,6 +90,11 @@ public class ConfigService
             validator.validateAndFix(loadedConfig);
             config = loadedConfig;
 
+            if (legacyConfig != null)
+            {
+                loader.saveConfig(config);
+            }
+
             logger.info("Config loaded and validated successfully");
         }
         catch (Exception e)

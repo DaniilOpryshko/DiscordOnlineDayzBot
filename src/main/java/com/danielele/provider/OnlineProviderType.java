@@ -1,4 +1,4 @@
-package com.danielele;
+package com.danielele.provider;
 
 public enum OnlineProviderType
 {

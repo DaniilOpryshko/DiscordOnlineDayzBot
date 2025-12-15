@@ -1,4 +1,6 @@
-package com.danielele;
+package com.danielele.provider;
+
+import com.danielele.ServerOnlineFun;
 
 public class CfToolsServerOnline implements ServerOnlineFun
 {

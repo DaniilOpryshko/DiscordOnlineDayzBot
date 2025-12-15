@@ -1,4 +1,4 @@
-package com.danielele;
+package com.danielele.provider;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

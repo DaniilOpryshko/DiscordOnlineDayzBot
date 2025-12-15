@@ -1,10 +1,13 @@
 package com.danielele;
 
+import com.danielele.config.ConfigService;
+import com.danielele.events.BotsReadyEvent;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import net.dv8tion.jda.api.JDA;
@@ -15,7 +18,10 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -28,117 +34,144 @@ public class DiscordBotService
 
     @Inject
     ConfigService configService;
+    @Inject
+    Event<BotsReadyEvent> botsReadyEvent;
 
-    private JDA jda;
-    private volatile boolean ready = false;
+    private List<DiscordBot> bots = new ArrayList<>();
 
     @PostConstruct
     public void init()
     {
         try
         {
-            String token = configService.getDiscord().token;
+            List<CompletableFuture<DiscordBot>> futures = new ArrayList<>();
 
-            if (token == null || token.equals("YOUR_BOT_TOKEN_HERE"))
+            for (ConfigService.BotInstance instance : configService.getInstances())
             {
-                logger.error("========================================");
-                logger.error("INVALID TOKEN!");
-                logger.error("Please set discord.token in config.json");
-                logger.error("Application will shut down in 5 seconds...");
-                logger.error("========================================");
-
-                try (ExecutorService executor = Executors.newSingleThreadExecutor())
+                CompletableFuture<DiscordBot> future = CompletableFuture.supplyAsync(() ->
                 {
-                    executor.submit(() ->
+                    try
                     {
-                        try
-                        {
-                            Thread.sleep(5000);
-                            logger.info("Shutting down application...");
-                            Quarkus.asyncExit(1);
-                        }
-                        catch (InterruptedException e)
-                        {
-                            Thread.currentThread().interrupt();
-                        }
-                    });
-                }
+                        return createBot(instance);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.error("Failed to create bot: {}", e.getMessage(), e);
+                        return null;
+                    }
+                });
 
-                return;
+                futures.add(future);
             }
 
-            logger.info("Connecting to Discord...");
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .join();
 
-            jda = JDABuilder.create(token, EnumSet.noneOf(GatewayIntent.class))
-                    .disableCache(CacheFlag.ACTIVITY,
-                            CacheFlag.VOICE_STATE,
-                            CacheFlag.EMOJI,
-                            CacheFlag.STICKER,
-                            CacheFlag.CLIENT_STATUS,
-                            CacheFlag.ONLINE_STATUS,
-                            CacheFlag.SCHEDULED_EVENTS
-                    )
-                    .enableIntents(GatewayIntent.GUILD_PRESENCES)
-                    .setActivity(Activity.of(getActivityType(configService.getStatus().activityType), "Starting..."))
-                    .setBulkDeleteSplittingEnabled(false)
-                    .setLargeThreshold(50)
-                    .build();
+            for (CompletableFuture<DiscordBot> future : futures)
+            {
+                DiscordBot bot = future.join();
+                if (bot != null)
+                {
+                    bots.add(bot);
+                }
+            }
 
-            jda.awaitReady();
-            ready = true;
+            logger.info("All bots connected successfully. Total: {}", bots.size());
 
-            logger.info("Bot connected successfully");
-
+            botsReadyEvent.fire(new BotsReadyEvent(bots));
         }
         catch (Exception e)
         {
-            logger.error("Failed to connect: {}", e.getMessage(), e);
+            logger.error("Failed to initialize bots: {}", e.getMessage(), e);
         }
     }
 
-    public JDA getClient()
+    private DiscordBot createBot(ConfigService.BotInstance instance) throws Exception
     {
-        return jda;
-    }
+        String token = instance.discord.token;
 
-    public void updatePresence(String status)
-    {
-        if (isReady())
+        if (token == null || token.equals("YOUR_BOT_TOKEN_HERE"))
         {
-            jda.getPresence().setActivity(Activity.of(getActivityType(configService.getStatus().activityType), status));
-        }
-    }
+            logger.error("========================================");
+            logger.error("INVALID TOKEN!");
+            logger.error("Please set discord.token in config.json");
+            logger.error("Application will shut down in 5 seconds...");
+            logger.error("========================================");
 
-    public boolean isReady()
-    {
-        return ready && jda != null && jda.getStatus() == JDA.Status.CONNECTED;
+            try (ExecutorService executor = Executors.newSingleThreadExecutor())
+            {
+                executor.submit(() ->
+                {
+                    try
+                    {
+                        Thread.sleep(5000);
+                        logger.info("Shutting down application...");
+                        Quarkus.asyncExit(1);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+            }
+        }
+
+        logger.info("Connecting bot to Discord...");
+
+        JDA jda = JDABuilder.create(token, EnumSet.noneOf(GatewayIntent.class))
+                .disableCache(CacheFlag.ACTIVITY,
+                        CacheFlag.VOICE_STATE,
+                        CacheFlag.EMOJI,
+                        CacheFlag.STICKER,
+                        CacheFlag.CLIENT_STATUS,
+                        CacheFlag.ONLINE_STATUS,
+                        CacheFlag.SCHEDULED_EVENTS
+                )
+                .enableIntents(GatewayIntent.GUILD_PRESENCES)
+                .setActivity(Activity.of(getActivityType(instance.status.activityType), "Starting..."))
+                .setBulkDeleteSplittingEnabled(false)
+                .setLargeThreshold(50)
+                .build();
+
+        jda.awaitReady();
+
+        DiscordBot discordBot = new DiscordBot(jda, instance);
+        logger.info("Bot connected successfully");
+
+        return discordBot;
     }
 
     void onShutdown(@Observes ShutdownEvent event)
     {
         logger.info("Quarkus ShutdownEvent triggered. Stopping bot gracefully...");
-        if (jda != null)
+
+        for (DiscordBot bot : bots)
         {
-            try
+            JDA jda = bot.getJda();
+
+            if (jda != null)
             {
-                jda.shutdown();
-                if (!jda.awaitShutdown(5, TimeUnit.SECONDS))
+                try
                 {
-                    logger.warn("Timeout waiting for JDA to shut down — forcing close.");
-                    jda.shutdownNow();
+                    jda.shutdown();
+                    if (!jda.awaitShutdown(5, TimeUnit.SECONDS))
+                    {
+                        logger.warn("Timeout waiting for JDA to shut down — forcing close.");
+                        jda.shutdownNow();
+                    }
+                    else
+                    {
+                        logger.info("Discord bot stopped successfully.");
+                    }
                 }
-                else
+                catch (InterruptedException e)
                 {
-                    logger.info("Discord bot stopped successfully.");
+                    Thread.currentThread().interrupt();
                 }
-            }
-            catch (InterruptedException e)
-            {
-                Thread.currentThread().interrupt();
-            }
-            catch (Exception e)
-            {
-                logger.error("Error during shutdown: {}", e.getMessage());
+                catch (Exception e)
+                {
+                    logger.error("Error during shutdown: {}", e.getMessage());
+                }
             }
         }
     }

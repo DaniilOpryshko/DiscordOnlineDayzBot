@@ -1,4 +1,4 @@
-package com.danielele;
+package com.danielele.provider;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;

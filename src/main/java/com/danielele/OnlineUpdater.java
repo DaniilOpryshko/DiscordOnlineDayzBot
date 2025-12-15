@@ -1,146 +1,106 @@
 package com.danielele;
 
+import com.danielele.config.ConfigService;
+import com.danielele.events.BotsReadyEvent;
+import com.danielele.provider.OnlineProviderType;
+import com.danielele.provider.PaymentStrategyFactory;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.Startup;
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.*;
 
 @Startup
 @ApplicationScoped
 public class OnlineUpdater
 {
-    private final DiscordBotService discordBotService;
     private final PaymentStrategyFactory paymentStrategyFactory;
-    private final ConfigService configService;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private ScheduledFuture<?> currentTask;
-
     private static final Logger logger = LoggerFactory.getLogger(OnlineUpdater.class);
 
-    public OnlineUpdater(DiscordBotService discordBotService, PaymentStrategyFactory paymentStrategyFactory, ConfigService configService)
+    private final Map<String, ScheduledExecutorService> schedulers = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledFuture<?>> tasks = new ConcurrentHashMap<>();
+
+    public OnlineUpdater(PaymentStrategyFactory paymentStrategyFactory)
     {
-        this.discordBotService = discordBotService;
         this.paymentStrategyFactory = paymentStrategyFactory;
-        this.configService = configService;
     }
 
-    @PostConstruct
-    public void startScheduler()
+    void onBotsReady(@Observes BotsReadyEvent event)
     {
-        System.setProperty("file.encoding", "UTF-8");
-        scheduleUpdate();
-        logger.info("Scheduler started with interval: {}s", configService.getUpdater().intervalSeconds);
-    }
+        logger.info("Bots are ready. Starting schedulers for {} bots...", event.getBots().size());
 
-    private void scheduleUpdate()
-    {
-        int interval = configService.getUpdater().intervalSeconds;
-
-        if (currentTask != null && !currentTask.isCancelled())
+        for (DiscordBot bot : event.getBots())
         {
-            currentTask.cancel(false);
+            startSchedulerForBot(bot);
         }
+    }
 
-        currentTask = scheduler.scheduleAtFixedRate(
-                this::updateOnlineStats,
+    private void startSchedulerForBot(DiscordBot bot)
+    {
+        int interval = bot.getBotInstanceConfig().updater.intervalSeconds;
+
+        String botId = bot.getBotInstanceConfig().server.ip + "-" + bot.getBotInstanceConfig().server.port;
+
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r ->
+        {
+            Thread t = new Thread(r);
+            t.setName("updater-" + botId);
+            return t;
+        });
+
+        schedulers.put(botId, scheduler);
+
+        ScheduledFuture<?> task = scheduler.scheduleAtFixedRate(
+                () -> updateOnlineStats(bot),
                 0,
                 interval,
                 TimeUnit.SECONDS
         );
+
+        tasks.put(botId, task);
+
+        logger.info("Scheduler started for bot {}: interval={}s", botId, interval);
     }
 
-    void updateOnlineStats()
-    {
-        if (!discordBotService.isReady())
-        {
-            return;
-        }
-
-        ServerOnlineFun serverOnline = paymentStrategyFactory.getStrategy(OnlineProviderType.CF_TOOLS).getServerOnline();
-        handleResponse(serverOnline);
-
-    }
-
-    private void handleResponse(ServerOnlineFun serverOnlineFun)
+    void updateOnlineStats(DiscordBot bot)
     {
         try
         {
-            String presence = formatPresenceMessage(serverOnlineFun);
-
-            discordBotService.updatePresence(presence);
-
-            logger.info("Updated presence: {}", presence);
+            ServerOnlineFun serverOnline = paymentStrategyFactory.getStrategy(OnlineProviderType.CF_TOOLS).getServerOnline(bot.getBotInstanceConfig().server);
+            bot.updatePresence(serverOnline);
         }
         catch (Exception e)
         {
-            logger.error("Parsing error: {}", e.getMessage(), e);
-        }
-    }
-
-    private String formatPresenceMessage(ServerOnlineFun serverOnlineFun)
-    {
-        String timeEmoji = getTimeEmoji(serverOnlineFun.getServerTime());
-
-        String message = configService.getStatus().message;
-
-        return message
-                .replace("${emoji.player}", configService.getEmojis().player)
-                .replace("${online}", String.valueOf(serverOnlineFun.getCurrentPlayers()))
-                .replace("${max}", String.valueOf(serverOnlineFun.getMaxPlayers()))
-                .replace("${emoji.daytime}", timeEmoji)
-                .replace("${time}", serverOnlineFun.getServerTime())
-                .replace("${status.queueBlock}", getQueueBlock(serverOnlineFun));
-    }
-
-    private String getQueueBlock(ServerOnlineFun serverOnlineFun)
-    {
-        boolean shouldShow = serverOnlineFun.isQueueActive()
-                || configService.getStatus().showQueueIfNotActive;
-
-        if (!shouldShow)
-        {
-            return "";
-        }
-
-        return configService.getStatus().queueBlock
-                .replace("${emoji.queue}", configService.getEmojis().queue)
-                .replace("${queue}", String.valueOf(serverOnlineFun.getQueueSize()));
-    }
-
-    private String getTimeEmoji(String serverTime)
-    {
-        try
-        {
-            int hour = Integer.parseInt(serverTime.split(":")[0]);
-            if (hour >= 6 && hour < 20)
-            {
-                return configService.getEmojis().day;
-            }
-            else
-            {
-                return configService.getEmojis().night;
-            }
-        }
-        catch (Exception e)
-        {
-            return configService.getEmojis().day;
+        logger.error("Error while updating presence for bot {}", bot.getBotInstanceConfig().server.ip, e);
         }
     }
 
     void onShutdown(@Observes ShutdownEvent event)
     {
-        logger.info("Quarkus ShutdownEvent triggered. Stopping scheduler gracefully...");
-        if (currentTask != null)
-        {
-            currentTask.cancel(true);
-        }
+        logger.info("Stopping all schedulers gracefully...");
+
+        tasks.values().forEach(task -> task.cancel(true));
+
+        schedulers.values().forEach(scheduler -> {
+            scheduler.shutdown();
+            try
+            {
+                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS))
+                {
+                    scheduler.shutdownNow();
+                }
+            }
+            catch (InterruptedException e)
+            {
+                scheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        logger.info("All schedulers stopped");
     }
 }

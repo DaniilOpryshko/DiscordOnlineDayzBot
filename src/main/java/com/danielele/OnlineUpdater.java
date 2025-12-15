@@ -43,7 +43,7 @@ public class OnlineUpdater
     {
         int interval = bot.getBotInstanceConfig().updater.intervalSeconds;
 
-        String botId = bot.getBotInstanceConfig().server.ip + "-" + bot.getBotInstanceConfig().server.port;
+        String botId = bot.getBotInstanceConfig().server.ip + ":" + bot.getBotInstanceConfig().server.port;
 
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r ->
         {
@@ -54,7 +54,7 @@ public class OnlineUpdater
 
         schedulers.put(botId, scheduler);
 
-        ScheduledFuture<?> task = scheduler.scheduleAtFixedRate(
+        ScheduledFuture<?> task = scheduler.scheduleWithFixedDelay(
                 () -> updateOnlineStats(bot),
                 0,
                 interval,

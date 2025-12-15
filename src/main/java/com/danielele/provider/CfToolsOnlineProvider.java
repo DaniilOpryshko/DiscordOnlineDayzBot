@@ -6,11 +6,12 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 public class CfToolsOnlineProvider implements OnlineProvider
 {
     private final WebClient webClient;
+    private static final Logger logger = LoggerFactory.getLogger(CfToolsOnlineProvider.class);
 
     private Map<ConfigService.ServerConfig, String> serverIdCache = new ConcurrentHashMap<>();
 
@@ -43,6 +45,7 @@ public class CfToolsOnlineProvider implements OnlineProvider
 
             if (response.statusCode() != 200)
             {
+                logger.error("Failed to get valid response from CFTools: {}", response.statusMessage());
                 return new CfToolsServerOnline(null);
             }
 
@@ -53,6 +56,8 @@ public class CfToolsOnlineProvider implements OnlineProvider
         }
         catch (InterruptedException | TimeoutException | ExecutionException e)
         {
+            logger.error("Exception while getting server info from CFTools: {}, {}", e.getClass().getSimpleName(), e.getMessage());
+            logger.error("Failed to get server info from CFTools: {}", e.getMessage());
             return new CfToolsServerOnline(null);
         }
     }

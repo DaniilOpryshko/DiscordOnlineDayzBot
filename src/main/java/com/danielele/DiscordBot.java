@@ -51,6 +51,11 @@ public class DiscordBot
 
     private String formatPresenceMessage(ServerOnlineFun serverOnlineFun)
     {
+        if (!serverOnlineFun.isOnline())
+        {
+            return botInstanceConfig.status.serverOfflineMessage;
+        }
+
         String timeEmoji = getTimeEmoji(serverOnlineFun.getServerTime());
 
         String message = botInstanceConfig.status.message;

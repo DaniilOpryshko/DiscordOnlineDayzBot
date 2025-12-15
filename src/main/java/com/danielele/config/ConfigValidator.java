@@ -74,6 +74,10 @@ public class ConfigValidator
             logger.warn("Instance[{}]: Updater section missing, using defaults", index);
             instance.updater = defaults.updater;
         }
+        else if (instance.updater.intervalSeconds <= 15)
+        {
+            logger.warn("Instance[{}]: Updater interval too low, i suggest keeping update interval 30-60 seconds", index);
+        }
         else if (instance.updater.intervalSeconds <= 0)
         {
             logger.warn("Instance[{}]: Invalid updater interval '{}', using default",

@@ -42,8 +42,6 @@ public class CfToolsServerOnline implements ServerOnlineFun
     @Override
     public Boolean isOnline()
     {
-        return serverData != null && serverData.isOnline();
+        return serverData != null;
     }
-
-
 }

@@ -107,6 +107,8 @@ public class ConfigMigrator
         instance.server = new ConfigService.ServerConfig();
         instance.server.ip = "127.0.0.1";
         instance.server.port = 2302;
+        instance.server.steamQueryPort = 27015;
+        instance.server.onlineProvider = "CFTOOLS";
 
         instance.emojis = createDefaultEmojis();
         instance.updater = new ConfigService.UpdaterConfig();

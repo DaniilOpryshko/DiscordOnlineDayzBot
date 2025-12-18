@@ -48,6 +48,17 @@ public class ConfigValidator
                 logger.warn("Instance[{}]: Invalid server port '{}', using default", index, instance.server.port);
                 instance.server.port = defaults.server.port;
             }
+
+            if (instance.server.steamQueryPort <= 0 || instance.server.steamQueryPort > 65535)
+            {
+                logger.warn("Instance[{}]: Invalid server query port '{}', using default", index, instance.server.steamQueryPort);
+                instance.server.steamQueryPort = defaults.server.steamQueryPort;
+            }
+            if (instance.server.onlineProvider == null || instance.server.onlineProvider.isEmpty())
+            {
+                logger.warn("Instance[{}]: Invalid online provider '{}', using default", index, instance.server.onlineProvider);
+                instance.server.onlineProvider = defaults.server.onlineProvider;
+            }
         }
 
         // Emojis validation
@@ -148,6 +159,8 @@ public class ConfigValidator
         instance.server = new ConfigService.ServerConfig();
         instance.server.ip = "127.0.0.1";
         instance.server.port = 2302;
+        instance.server.steamQueryPort = 27015;
+        instance.server.onlineProvider = "CFTOOLS";
 
         instance.emojis = new ConfigService.EmojisConfig();
         instance.emojis.player = "👥";

@@ -24,7 +24,7 @@ public class ConfigService
 {
     private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
     private static final String CONFIG_FILE = "OnlineBot_Config.json";
-    private static final int CONFIG_VERSION = 4;
+    private static final int CONFIG_VERSION = 5;
 
     private AppConfig config;
     private final ConfigLoader loader;
@@ -83,6 +83,7 @@ public class ConfigService
                 {
                     logger.warn("Config version mismatch: {} < {}", loadedConfig.version, CONFIG_VERSION);
                     loadedConfig = migrator.migrate(loadedConfig);
+                    validator.validateAndFix(loadedConfig);
                     loader.backupAndSave(configFile, loadedConfig);
                 }
             }
@@ -169,6 +170,8 @@ public class ConfigService
     {
         public String ip;
         public int port;
+        public int steamQueryPort;
+        public String onlineProvider;
     }
 
     @RegisterForReflection

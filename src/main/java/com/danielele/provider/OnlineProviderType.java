@@ -2,7 +2,7 @@ package com.danielele.provider;
 
 public enum OnlineProviderType
 {
-    CF_TOOLS("CF_TOOLS"),
+    CF_TOOLS("CFTOOLS"),
     STEAM_API("STEAM_API"),
     A2S("A2S");
 

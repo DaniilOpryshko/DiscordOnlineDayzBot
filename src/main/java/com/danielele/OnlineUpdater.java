@@ -1,9 +1,8 @@
 package com.danielele;
 
-import com.danielele.config.ConfigService;
 import com.danielele.events.BotsReadyEvent;
 import com.danielele.provider.OnlineProviderType;
-import com.danielele.provider.PaymentStrategyFactory;
+import com.danielele.provider.OnlineProviderFactory;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,15 +17,15 @@ import java.util.concurrent.*;
 @ApplicationScoped
 public class OnlineUpdater
 {
-    private final PaymentStrategyFactory paymentStrategyFactory;
+    private final OnlineProviderFactory onlineProviderFactory;
     private static final Logger logger = LoggerFactory.getLogger(OnlineUpdater.class);
 
     private final Map<String, ScheduledExecutorService> schedulers = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> tasks = new ConcurrentHashMap<>();
 
-    public OnlineUpdater(PaymentStrategyFactory paymentStrategyFactory)
+    public OnlineUpdater(OnlineProviderFactory onlineProviderFactory)
     {
-        this.paymentStrategyFactory = paymentStrategyFactory;
+        this.onlineProviderFactory = onlineProviderFactory;
     }
 
     void onBotsReady(@Observes BotsReadyEvent event)
@@ -70,13 +69,18 @@ public class OnlineUpdater
     {
         try
         {
-            ServerOnlineFun serverOnline = paymentStrategyFactory.getStrategy(OnlineProviderType.CF_TOOLS).getServerOnline(bot.getBotInstanceConfig().server);
+            ServerOnlineFun serverOnline = onlineProviderFactory.getStrategy(getProviderType(bot.getBotInstanceConfig().server.onlineProvider)).getServerOnline(bot.getBotInstanceConfig().server);
             bot.updatePresence(serverOnline);
         }
         catch (Exception e)
         {
         logger.error("Error while updating presence for bot {}", bot.getBotInstanceConfig().server.ip, e);
         }
+    }
+
+    private OnlineProviderType getProviderType(String provider)
+    {
+        return OnlineProviderType.fromString(provider.toUpperCase());
     }
 
     void onShutdown(@Observes ShutdownEvent event)

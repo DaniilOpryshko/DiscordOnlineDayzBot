@@ -14,41 +14,104 @@ public class CfToolsServerOnline implements ServerOnlineFun
     @Override
     public Integer getCurrentPlayers()
     {
-        if (serverData == null) return 0;
-        return serverData.getStatus().getPlayers();
+        CFToolsResponse.Status status = getStatus();
+        if (status == null)
+        {
+            return 0;
+        }
+        return status.getPlayers();
     }
 
     @Override
     public Integer getMaxPlayers()
     {
-        if (serverData == null) return 0;
-        return serverData.getStatus().getSlots();
+        CFToolsResponse.Status status = getStatus();
+        if (status == null)
+        {
+            return 0;
+        }
+        return status.getSlots();
     }
 
     @Override
     public String getServerTime()
     {
-        if (serverData == null) return "00:00";
-        return serverData.getEnvironment().getTime();
+        CFToolsResponse.Environment environment = getEnvironment();
+        if (environment == null || environment.getTime() == null || environment.getTime().isBlank())
+        {
+            return "00:00";
+        }
+        return environment.getTime();
     }
 
     @Override
     public Integer getQueueSize()
     {
-        if (serverData == null) return 0;
-        return serverData.getStatus().getQueue().getSize();
+        CFToolsResponse.Queue queue = getQueue();
+        if (queue == null)
+        {
+            return 0;
+        }
+        return queue.getSize();
     }
 
     @Override
     public Boolean isQueueActive()
     {
-        if (serverData == null) return false;
-        return serverData.getStatus().getQueue().isActive();
+        CFToolsResponse.Queue queue = getQueue();
+        if (queue == null)
+        {
+            return false;
+        }
+        return queue.isActive();
     }
 
     @Override
     public Boolean isOnline()
     {
-        return serverData != null;
+        if (serverData == null)
+        {
+            return false;
+        }
+
+        if (serverData.isOffline())
+        {
+            return false;
+        }
+
+        if (serverData.isOnline())
+        {
+            return true;
+        }
+
+        return serverData.getStatus() != null;
+    }
+
+    private CFToolsResponse.Status getStatus()
+    {
+        if (serverData == null)
+        {
+            return null;
+        }
+        return serverData.getStatus();
+    }
+
+    private CFToolsResponse.Environment getEnvironment()
+    {
+        if (serverData == null)
+        {
+            return null;
+        }
+        return serverData.getEnvironment();
+    }
+
+    private CFToolsResponse.Queue getQueue()
+    {
+        CFToolsResponse.Status status = getStatus();
+        if (status == null)
+        {
+            return null;
+        }
+        return status.getQueue();
     }
 }

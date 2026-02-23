@@ -1,6 +1,9 @@
 // Discord Bot Configuration
 // For more info visit: https://github.com/DaniilOpryshko/DiscordOnlineDayzBot
 //
+// This config now supports multiple bot instances!
+// Each instance can monitor a different server with its own settings.
+//
 // Available placeholders for status.message:
 //   ${emoji.player} - Player emoji
 //   ${emoji.daytime} - Day/Night emoji
@@ -10,35 +13,39 @@
 //   ${time} - In-game time
 //   ${queue} - Queue size
 //   ${status.queueBlock} - Queue block (if enabled)
-
+//
 //   Possible values for activityType: PLAYING, LISTENING, WATCHING, COMPETING, CUSTOM_STATUS
 //
 // Note: Changes require bot restart
 //
 
 {
-  "version" : 3,
-  "server" : {
-    "ip" : "127.0.0.1",
-    "port" : 2302
-  },
-  "emojis" : {
-    "player" : "👥",
-    "day" : "☀️",
-    "night" : "🌙",
-    "queue" : "👥"
-  },
-  "updater" : {
-    "intervalSeconds" : 10
-  },
-  "discord" : {
-    "token" : "YOUR_BOT_TOKEN_HERE"
-  },
-  "status" : {
-    "message" : "${emoji.player} ${online} / ${max} ${emoji.daytime} ${time} ${status.queueBlock} ",
-    "queueBlock" : "${emoji.queue} ${queue}",
-    "showQueueIfNotActive" : true,
-    "activityType" : "PLAYING",
-    "serverOfflineMessage" : "Server offline"
-  }
+  "version" : 5,
+  "instances" : [ {
+    "discord" : {
+      "token" : "YOUR_BOT_TOKEN_HERE"
+    },
+    "server" : {
+      "ip" : "127.0.0.1",
+      "port" : 2302,
+      "steamQueryPort" : 27015,
+      "onlineProvider" : "CFTOOLS"
+    },
+    "emojis" : {
+      "player" : "👥",
+      "day" : "☀️",
+      "night" : "🌙",
+      "queue" : "👥"
+    },
+    "updater" : {
+      "intervalSeconds" : 30
+    },
+    "status" : {
+      "message" : "${emoji.player} ${online} / ${max} ${emoji.daytime} ${time} ${status.queueBlock} ",
+      "queueBlock" : "${emoji.queue} ${queue}",
+      "showQueueIfNotActive" : true,
+      "activityType" : "PLAYING",
+      "serverOfflineMessage" : "Server offline"
+    }
+  } ]
 }

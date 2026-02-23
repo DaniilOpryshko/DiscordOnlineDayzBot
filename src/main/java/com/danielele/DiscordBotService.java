@@ -46,13 +46,17 @@ public class DiscordBotService
         {
             List<CompletableFuture<DiscordBot>> futures = new ArrayList<>();
 
-            for (ConfigService.BotInstance instance : configService.getInstances())
+            List<ConfigService.BotInstance> instances = configService.getInstances();
+            for (int i = 0; i < instances.size(); i++)
             {
+                ConfigService.BotInstance instance = instances.get(i);
+                int instanceIndex = i;
+
                 CompletableFuture<DiscordBot> future = CompletableFuture.supplyAsync(() ->
                 {
                     try
                     {
-                        return createBot(instance);
+                        return createBot(instance, instanceIndex);
                     }
                     catch (Exception e)
                     {
@@ -86,15 +90,21 @@ public class DiscordBotService
         }
     }
 
-    private DiscordBot createBot(ConfigService.BotInstance instance) throws Exception
+    private DiscordBot createBot(ConfigService.BotInstance instance, int instanceIndex) throws Exception
     {
         String token = instance.discord.token;
 
         if (token == null || token.equals("YOUR_BOT_TOKEN_HERE"))
         {
             logger.error("========================================");
-            logger.error("INVALID TOKEN!");
-            logger.error("Please set discord.token in config.json");
+            logger.error("INVALID TOKEN FOR INSTANCE[{}]!", instanceIndex);
+            logger.error("For ENV mode define BOTH '{}' and '{}'.",
+                    envKey(instanceIndex, "SERVER_IP"), envKey(instanceIndex, "DISCORD_TOKEN"));
+            if (instanceIndex == 0)
+            {
+                logger.error("For first instance you can also use '{}' and '{}'.", "SERVER_IP", "DISCORD_TOKEN");
+            }
+            logger.error("For local JSON mode set instances[{}].discord.token directly in config file.", instanceIndex);
             logger.error("Application will shut down in 5 seconds...");
             logger.error("========================================");
 
@@ -139,6 +149,11 @@ public class DiscordBotService
         logger.info("Bot connected successfully");
 
         return discordBot;
+    }
+
+    private String envKey(int instanceIndex, String suffix)
+    {
+        return "INSTANCE_" + instanceIndex + "_" + suffix;
     }
 
     void onShutdown(@Observes ShutdownEvent event)

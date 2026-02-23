@@ -193,6 +193,13 @@ public class ConfigLoader
         withComments.append("// This config now supports multiple bot instances!\n");
         withComments.append("// Each instance can monitor a different server with its own settings.\n");
         withComments.append("//\n");
+        withComments.append("// Environment variable overrides (recommended for Docker deployments):\n");
+        withComments.append("//   Instance N server IP: INSTANCE_N_SERVER_IP (example: INSTANCE_0_SERVER_IP)\n");
+        withComments.append("//   Instance N Discord token: INSTANCE_N_DISCORD_TOKEN (example: INSTANCE_0_DISCORD_TOKEN)\n");
+        withComments.append("//   Optional shortcuts for instance 0 only: SERVER_IP, DISCORD_TOKEN\n");
+        withComments.append("//   ENV mode is enabled per instance only when BOTH server IP and token variables are set.\n");
+        withComments.append("//   If both are not set, app uses values from JSON (local multi-instance mode).\n");
+        withComments.append("//\n");
         withComments.append("// Available placeholders for status.message:\n");
         withComments.append("//   ${emoji.player} - Player emoji\n");
         withComments.append("//   ${emoji.daytime} - Day/Night emoji\n");

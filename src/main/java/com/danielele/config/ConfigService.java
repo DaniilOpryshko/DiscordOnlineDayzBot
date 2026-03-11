@@ -25,6 +25,11 @@ public class ConfigService
     private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
     private static final String CONFIG_FILE = "OnlineBot_Config.json";
     private static final int CONFIG_VERSION = 5;
+    private static final String ENV_SERVER_IP_SUFFIX = "SERVER_IP";
+    private static final String ENV_DISCORD_TOKEN_SUFFIX = "DISCORD_TOKEN";
+    private static final String ENV_INSTANCE_PREFIX = "INSTANCE_%d_";
+    private static final String ENV_GLOBAL_SERVER_IP = "SERVER_IP";
+    private static final String ENV_GLOBAL_DISCORD_TOKEN = "DISCORD_TOKEN";
 
     private AppConfig config;
     private final ConfigLoader loader;
@@ -61,6 +66,8 @@ public class ConfigService
             {
                 config = migrator.createDefaultConfig();
                 loader.saveConfig(config);
+                validator.validateAndFix(config);
+                applyEnvOverrides(config);
                 logger.info("Created default {} file", CONFIG_FILE);
                 return;
             }
@@ -89,13 +96,14 @@ public class ConfigService
             }
 
             validator.validateAndFix(loadedConfig);
-            config = loadedConfig;
 
             if (legacyConfig != null)
             {
-                loader.saveConfig(config);
+                loader.saveConfig(loadedConfig);
             }
 
+            applyEnvOverrides(loadedConfig);
+            config = loadedConfig;
             logger.info("Config loaded and validated successfully");
         }
         catch (Exception e)
@@ -111,6 +119,140 @@ public class ConfigService
             {
                 logger.error("Failed to save default config: {}", ex.getMessage());
             }
+            validator.validateAndFix(config);
+            applyEnvOverrides(config);
+        }
+    }
+
+    private void applyEnvOverrides(AppConfig loadedConfig)
+    {
+        if (loadedConfig.instances == null || loadedConfig.instances.isEmpty())
+        {
+            return;
+        }
+
+        boolean anyEnvOverride = false;
+
+        for (int i = 0; i < loadedConfig.instances.size(); i++)
+        {
+            BotInstance instance = loadedConfig.instances.get(i);
+            EnvPair envPair = resolveEnvPair(i);
+
+            if (envPair.hasFullPair())
+            {
+                instance.server.ip = envPair.serverIp;
+                instance.discord.token = envPair.discordToken;
+                anyEnvOverride = true;
+
+                logger.info("Instance[{}]: using environment variables '{}' and '{}'.",
+                        i, envPair.serverIpEnvName, envPair.discordTokenEnvName);
+            }
+            else if (envPair.hasPartialPair())
+            {
+                logger.warn("Instance[{}]: partial environment override detected. Set both '{}' and '{}'{} to use ENV mode, or remove both to use JSON values.",
+                        i, envPair.serverIpEnvName, envPair.discordTokenEnvName, optionalGlobalHint(i));
+            }
+            else
+            {
+                logger.info("Instance[{}]: ENV naming for override is '{}' + '{}'{}.",
+                        i, envPair.serverIpEnvName, envPair.discordTokenEnvName, optionalGlobalHint(i));
+            }
+        }
+
+        if (!anyEnvOverride)
+        {
+            if (isCloudRunAlikeEnvironment())
+            {
+                logger.warn("Cloud Run detected and no complete ENV override pairs were found. Define both 'INSTANCE_N_SERVER_IP' and 'INSTANCE_N_DISCORD_TOKEN' (or 'SERVER_IP' + 'DISCORD_TOKEN' for instance 0). Otherwise service will use JSON values baked into the image.");
+            }
+            logger.info("No complete environment override pairs found. Using JSON configuration for all instances.");
+        }
+    }
+
+    private boolean isCloudRunAlikeEnvironment()
+    {
+        return hasValue(System.getenv("K_SERVICE"));
+    }
+
+    private String optionalGlobalHint(int instanceIndex)
+    {
+        if (instanceIndex == 0)
+        {
+            return " (for instance 0 you can also use '" + ENV_GLOBAL_SERVER_IP + "' and '" + ENV_GLOBAL_DISCORD_TOKEN + "')";
+        }
+        return "";
+    }
+
+    private EnvPair resolveEnvPair(int instanceIndex)
+    {
+        String instanceServerIpEnv = envKey(instanceIndex, ENV_SERVER_IP_SUFFIX);
+        String instanceTokenEnv = envKey(instanceIndex, ENV_DISCORD_TOKEN_SUFFIX);
+
+        String instanceServerIp = readEnv(instanceServerIpEnv);
+        String instanceToken = readEnv(instanceTokenEnv);
+
+        if (hasValue(instanceServerIp) || hasValue(instanceToken))
+        {
+            return new EnvPair(instanceServerIpEnv, instanceTokenEnv, instanceServerIp, instanceToken);
+        }
+
+        if (instanceIndex == 0)
+        {
+            String globalServerIp = readEnv(ENV_GLOBAL_SERVER_IP);
+            String globalToken = readEnv(ENV_GLOBAL_DISCORD_TOKEN);
+            if (hasValue(globalServerIp) || hasValue(globalToken))
+            {
+                return new EnvPair(ENV_GLOBAL_SERVER_IP, ENV_GLOBAL_DISCORD_TOKEN, globalServerIp, globalToken);
+            }
+        }
+
+        return new EnvPair(instanceServerIpEnv, instanceTokenEnv, null, null);
+    }
+
+    private String readEnv(String envName)
+    {
+        String value = System.getenv(envName);
+        if (value == null || value.isBlank())
+        {
+            return null;
+        }
+        return value;
+    }
+
+    private boolean hasValue(String value)
+    {
+        return value != null && !value.isBlank();
+    }
+
+    private String envKey(int instanceIndex, String suffix)
+    {
+        return String.format(ENV_INSTANCE_PREFIX, instanceIndex) + suffix;
+    }
+
+    private static final class EnvPair
+    {
+        private final String serverIpEnvName;
+        private final String discordTokenEnvName;
+        private final String serverIp;
+        private final String discordToken;
+
+        private EnvPair(String serverIpEnvName, String discordTokenEnvName, String serverIp, String discordToken)
+        {
+            this.serverIpEnvName = serverIpEnvName;
+            this.discordTokenEnvName = discordTokenEnvName;
+            this.serverIp = serverIp;
+            this.discordToken = discordToken;
+        }
+
+        private boolean hasFullPair()
+        {
+            return serverIp != null && discordToken != null;
+        }
+
+        private boolean hasPartialPair()
+        {
+            return (serverIp != null && discordToken == null)
+                    || (serverIp == null && discordToken != null);
         }
     }
 
